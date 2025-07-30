@@ -23,11 +23,20 @@ country_coords = {
     "Еgiptus": {"lat": 25.00, "lon": 31.00}, # Cyrillic E
 }
 
-# Mapping to convert Cyrillic country names to Latin for the CSV output
+# Mapping to convert Cyrillic country names to Latin and to get country codes
 country_name_mapping = {
     "Тürgi": "Türgi",
     "Еgiptus": "Egiptus",
     # Add other mappings if needed
+}
+
+country_codes = {
+    "Bulgaaria": "BG",
+    "Тürgi": "TR",
+    "Kreeka": "GR",
+    "Rhodos": "GR",
+    "Kreeta": "GR",
+    "Еgiptus": "EG",
 }
 
 # The meta headings for the final CSV file
@@ -78,14 +87,19 @@ def process_single_url(url):
             print(f"Skipping hotel with invalid star rating: {star_rating_raw}")
             continue
 
-        hotel_id = item.find('id').text if item.find('id') is not None else ""
-        name = item.find('name').text if item.find('name') is not None else ""
-        region = item.find('region').text if item.find('region') is not None else ""
-        country_xml = item.find('country').text if item.find('country') is not None else ""
+        hotel_id_raw = item.find('id').text.strip() if item.find('id') is not None and item.find('id').text else ""
+        # --- NEW SANITATION STEP ---
+        # Ensure hotel_id contains only digits, removing any non-digit characters
+        hotel_id_clean = ''.join(c for c in hotel_id_raw if c.isdigit())
+        # ---------------------------
 
-        price = item.find('price').text if item.find('price') is not None else ""
-        photo_url = item.find('photo').text if item.find('photo') is not None else ""
-        original_url = item.find('url').text if item.find('url') is not None else ""
+        name = item.find('name').text.strip() if item.find('name') is not None and item.find('name').text else ""
+        region = item.find('region').text.strip() if item.find('region') is not None and item.find('region').text else ""
+        country_xml = item.find('country').text.strip() if item.find('country') is not None and item.find('country').text else ""
+
+        price = item.find('price').text.strip() if item.find('price') is not None and item.find('price').text else ""
+        photo_url = item.find('photo').text.strip() if item.find('photo') is not None and item.find('photo').text else ""
+        original_url = item.find('url').text.strip() if item.find('url') is not None and item.find('url').text else ""
 
         if country_from_feed is None and country_xml:
             country_from_feed = country_xml
@@ -100,6 +114,10 @@ def process_single_url(url):
             
         # Convert country name to Latin for the CSV output
         country_latin = country_name_mapping.get(country_xml, country_xml)
+        
+        # Get the country code and create a unique ID
+        country_code = country_codes.get(country_xml, "")
+        unique_hotel_id = f"{country_code}_{hotel_id_clean}" if country_code and hotel_id_clean else hotel_id_clean
 
         updated_url = original_url
         if original_url:
@@ -107,12 +125,22 @@ def process_single_url(url):
             updated_url = re.sub(r'before/\d{2}\.\d{2}\.\d{4}', f'before/{seven_days_later_str}', updated_url)
 
         new_item = {
-            'hotel_id': hotel_id, 'star_rating': star_rating, 'name': name, 'description': name,
-            'brand': name, 'address.addr1': region, 'address.city': region, 'address.region': region,
-            'address.country': country_latin, # Use the Latin version here
-            'address.postal_code': '00000', 'latitude': lat,
-            'longitude': lon, 'neighborhood[0]': region, 'base_price': price,
-            'image[0].url': photo_url, 'url': updated_url
+            'hotel_id': unique_hotel_id,
+            'star_rating': star_rating,
+            'name': name,
+            'description': name,
+            'brand': name,
+            'address.addr1': region,
+            'address.city': region,
+            'address.region': region,
+            'address.country': country_latin,
+            'address.postal_code': '00000',
+            'latitude': lat,
+            'longitude': lon,
+            'neighborhood[0]': region,
+            'base_price': price,
+            'image[0].url': photo_url,
+            'url': updated_url
         }
         processed_data.append(new_item)
     
