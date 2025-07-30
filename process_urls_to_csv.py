@@ -23,25 +23,16 @@ country_coords = {
     "Еgiptus": {"lat": 25.00, "lon": 31.00}, # Cyrillic E
 }
 
-# Mapping to convert Cyrillic country names to Latin and to get country codes
+# Mapping to convert Cyrillic country names to Latin
 country_name_mapping = {
     "Тürgi": "Türgi",
     "Еgiptus": "Egiptus",
     # Add other mappings if needed
 }
 
-country_codes = {
-    "Bulgaaria": "BG",
-    "Тürgi": "TR",
-    "Kreeka": "GR",
-    "Rhodos": "GR",
-    "Kreeta": "GR",
-    "Еgiptus": "EG",
-}
-
 # The meta headings for the final CSV file
 HEADERS = [
-    'hotel_id', # Using the correct header as you specified
+    'hotel_id',
     'star_rating', 'name', 'description', 'brand',
     'address.addr1', 'address.city', 'address.region', 'address.country',
     'address.postal_code', 'latitude', 'longitude', 'neighborhood[0]',
@@ -112,9 +103,8 @@ def process_single_url(url):
         # Convert country name to Latin for the CSV output
         country_latin = country_name_mapping.get(country_xml, country_xml)
         
-        # Get the country code and create a unique ID
-        country_code = country_codes.get(country_xml, "")
-        unique_hotel_id = f"{country_code}_{hotel_id_clean}" if country_code and hotel_id_clean else hotel_id_clean
+        # Reverting to the original hotel ID without a prefix
+        hotel_id = hotel_id_clean
 
         updated_url = original_url
         if original_url:
@@ -122,7 +112,7 @@ def process_single_url(url):
             updated_url = re.sub(r'before/\d{2}\.\d{2}\.\d{4}', f'before/{seven_days_later_str}', updated_url)
 
         new_item = {
-            'hotel_id': unique_hotel_id,
+            'hotel_id': hotel_id,
             'star_rating': star_rating,
             'name': name,
             'description': name,
@@ -151,7 +141,8 @@ def write_to_csv(data, filename):
         return
 
     try:
-        with open(filename, 'w', newline='', encoding='utf-8') as csvfile:
+        # Use 'utf-8-sig' to include the BOM, which helps parsers correctly identify the encoding
+        with open(filename, 'w', newline='', encoding='utf-8-sig') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=HEADERS)
             writer.writeheader()
             writer.writerows(data)
