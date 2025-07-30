@@ -41,7 +41,6 @@ def process_single_url(url):
     """Downloads XML from a URL, processes it, and returns a tuple (country_name, list_of_dictionaries)."""
     print(f"Attempting to download XML from: {url}")
     
-    # Add a User-Agent header to mimic a web browser
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
     
     try:
@@ -61,7 +60,9 @@ def process_single_url(url):
     today_str = today.strftime('%d.%m.%Y')
     seven_days_later_str = seven_days_later.strftime('%d.%m.%Y')
 
-    for item in root.findall('item'):
+    # Changed from root.findall('item') to root.findall('.//item')
+    # This finds all 'item' tags anywhere in the XML tree.
+    for item in root.findall('.//item'):
         hotel_id = item.find('id').text if item.find('id') is not None else ""
         star_rating = item.find('stars').text.split()[0] if item.find('stars') is not None else ""
         name = item.find('name').text if item.find('name') is not None else ""
