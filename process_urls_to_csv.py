@@ -39,6 +39,15 @@ HEADERS = [
     'base_price', 'image[0].url', 'url'
 ]
 
+def sanitize_string(s):
+    """Sanitizes a string to contain only printable ASCII characters and common non-ASCII characters."""
+    if not s:
+        return ""
+    
+    # Remove non-printable characters and control characters
+    s = s.strip()
+    return ''.join(c for c in s if 32 <= ord(c) < 127 or c in 'äöüõÄÖÜÕéÉíÍ')
+
 def sanitize_filename(name):
     """Sanitizes a string to be used as a filename."""
     name = name.lower()
@@ -72,7 +81,6 @@ def process_single_url(url):
 
     for item in root.findall('.//item'):
         star_rating_raw = item.find('stars').text if item.find('stars') is not None else ""
-        
         star_rating = star_rating_raw.split()[0] if star_rating_raw else ""
         
         if not star_rating.isdigit() or not (1 <= int(star_rating) <= 5):
@@ -81,6 +89,11 @@ def process_single_url(url):
 
         hotel_id_raw = item.find('id').text.strip() if item.find('id') is not None and item.find('id').text else ""
         hotel_id_clean = ''.join(c for c in hotel_id_raw if c.isdigit())
+        
+        if not hotel_id_clean:
+            print(f"Warning: Skipping an item due to missing hotel ID.")
+            continue
+
         name = item.find('name').text.strip() if item.find('name') is not None and item.find('name').text else ""
         region = item.find('region').text.strip() if item.find('region') is not None and item.find('region').text else ""
         country_xml = item.find('country').text.strip() if item.find('country') is not None and item.find('country').text else ""
@@ -92,7 +105,6 @@ def process_single_url(url):
         if country_from_feed is None and country_xml:
             country_from_feed = country_xml
 
-        # Get coordinates using the XML's country name
         coords = country_coords.get(country_xml, {"lat": "", "lon": ""})
         lat = coords.get("lat")
         lon = coords.get("lon")
@@ -100,34 +112,31 @@ def process_single_url(url):
         if not lat or not lon:
             print(f"Warning: No coordinates found for country '{country_xml}'.")
             
-        # Convert country name to Latin for the CSV output
         country_latin = country_name_mapping.get(country_xml, country_xml)
         
-        # Reverting to the original hotel ID without a prefix
         hotel_id = hotel_id_clean
-
         updated_url = original_url
         if original_url:
             updated_url = re.sub(r'after/\d{2}\.\d{2}\.\d{4}', f'after/{today_str}', original_url)
             updated_url = re.sub(r'before/\d{2}\.\d{2}\.\d{4}', f'before/{seven_days_later_str}', updated_url)
 
         new_item = {
-            'hotel_id': hotel_id,
-            'star_rating': star_rating,
-            'name': name,
-            'description': name,
-            'brand': name,
-            'address.addr1': region,
-            'address.city': region,
-            'address.region': region,
-            'address.country': country_latin,
-            'address.postal_code': '00000',
+            'hotel_id': sanitize_string(hotel_id),
+            'star_rating': sanitize_string(star_rating),
+            'name': sanitize_string(name),
+            'description': sanitize_string(name),
+            'brand': sanitize_string(name),
+            'address.addr1': sanitize_string(region),
+            'address.city': sanitize_string(region),
+            'address.region': sanitize_string(region),
+            'address.country': sanitize_string(country_latin),
+            'address.postal_code': sanitize_string('00000'),
             'latitude': lat,
             'longitude': lon,
-            'neighborhood[0]': region,
-            'base_price': price,
-            'image[0].url': photo_url,
-            'url': updated_url
+            'neighborhood[0]': sanitize_string(region),
+            'base_price': sanitize_string(price),
+            'image[0].url': sanitize_string(photo_url),
+            'url': sanitize_string(updated_url)
         }
         processed_data.append(new_item)
     
@@ -135,7 +144,7 @@ def process_single_url(url):
     return country_from_feed, processed_data
 
 def write_to_csv(data, filename):
-    """Writes a list of dictionaries to a CSV file."""
+    """Writes a list of dictionaries to a CSV file using a robust method."""
     if not data:
         print(f"No data to write to {filename}.")
         return
@@ -143,9 +152,13 @@ def write_to_csv(data, filename):
     try:
         # Use 'utf-8-sig' to include the BOM, which helps parsers correctly identify the encoding
         with open(filename, 'w', newline='', encoding='utf-8-sig') as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=HEADERS)
-            writer.writeheader()
-            writer.writerows(data)
+            writer = csv.writer(csvfile)
+            # Write the header row
+            writer.writerow(HEADERS)
+            # Write the data rows
+            for item in data:
+                row = [item.get(header, '') for header in HEADERS]
+                writer.writerow(row)
         print(f"Successfully created {filename} with {len(data)} rows.")
     except Exception as e:
         print(f"Error writing to CSV file {filename}: {e}")
