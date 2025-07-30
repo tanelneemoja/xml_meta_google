@@ -41,7 +41,8 @@ country_codes = {
 
 # The meta headings for the final CSV file
 HEADERS = [
-    'hotel_id', 'star_rating', 'name', 'description', 'brand',
+    'id', # Changed from 'hotel_id' to 'id'
+    'star_rating', 'name', 'description', 'brand',
     'address.addr1', 'address.city', 'address.region', 'address.country',
     'address.postal_code', 'latitude', 'longitude', 'neighborhood[0]',
     'base_price', 'image[0].url', 'url'
@@ -88,11 +89,7 @@ def process_single_url(url):
             continue
 
         hotel_id_raw = item.find('id').text.strip() if item.find('id') is not None and item.find('id').text else ""
-        # --- NEW SANITATION STEP ---
-        # Ensure hotel_id contains only digits, removing any non-digit characters
         hotel_id_clean = ''.join(c for c in hotel_id_raw if c.isdigit())
-        # ---------------------------
-
         name = item.find('name').text.strip() if item.find('name') is not None and item.find('name').text else ""
         region = item.find('region').text.strip() if item.find('region') is not None and item.find('region').text else ""
         country_xml = item.find('country').text.strip() if item.find('country') is not None and item.find('country').text else ""
@@ -125,7 +122,7 @@ def process_single_url(url):
             updated_url = re.sub(r'before/\d{2}\.\d{2}\.\d{4}', f'before/{seven_days_later_str}', updated_url)
 
         new_item = {
-            'hotel_id': unique_hotel_id,
+            'id': unique_hotel_id, # Changed key to 'id'
             'star_rating': star_rating,
             'name': name,
             'description': name,
