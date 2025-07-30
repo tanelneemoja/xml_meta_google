@@ -8,6 +8,7 @@ import os
 # List of URLs to process.
 URLS = [
     'https://www.teztour.ee/bestoffers/minprices.ee.html?departureCityId=3746&countryId=158976',
+    'https://www.teztour.ee/bestoffers/minprices.ee.html?departureCityId=3746&countryId=1104',
     # Add your other 4-5 URLs here.
 ]
 
