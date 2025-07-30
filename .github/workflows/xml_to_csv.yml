@@ -1,0 +1,40 @@
+name: Process XML Feeds to CSV
+
+on:
+  push:
+    branches:
+      - main  # Trigger the workflow on a push to the main branch
+  schedule:
+    # Runs every 4 hours, adjusted for Estonian time (EEST, UTC+3)
+    - cron: '0 1,5,9,13,17,21 * * *'
+  workflow_dispatch: # Allows you to manually trigger the workflow from the Actions tab
+
+jobs:
+  process-feeds:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          pip install requests
+
+      - name: Run processing script
+        run: |
+          # This script will download from all specified URLs and create separate CSV files.
+          python process_urls_to_csv.py
+
+      - name: List generated CSV files
+        run: ls -l *.csv
+
+      - name: Upload processed CSV files as artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: processed-catalogue-files
+          path: "*.csv"
