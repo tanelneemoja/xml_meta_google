@@ -41,7 +41,7 @@ country_codes = {
 
 # The meta headings for the final CSV file
 HEADERS = [
-    'id', # Changed from 'hotel_id' to 'id'
+    'hotel_id', # Using the correct header as you specified
     'star_rating', 'name', 'description', 'brand',
     'address.addr1', 'address.city', 'address.region', 'address.country',
     'address.postal_code', 'latitude', 'longitude', 'neighborhood[0]',
@@ -122,7 +122,7 @@ def process_single_url(url):
             updated_url = re.sub(r'before/\d{2}\.\d{2}\.\d{4}', f'before/{seven_days_later_str}', updated_url)
 
         new_item = {
-            'id': unique_hotel_id, # Changed key to 'id'
+            'hotel_id': unique_hotel_id,
             'star_rating': star_rating,
             'name': name,
             'description': name,
