@@ -40,13 +40,11 @@ HEADERS = [
 ]
 
 def sanitize_string(s):
-    """Sanitizes a string to contain only printable ASCII characters and common non-ASCII characters."""
+    """Sanitizes a string to contain only printable characters."""
     if not s:
         return ""
-    
-    # Remove non-printable characters and control characters
-    s = s.strip()
-    return ''.join(c for c in s if 32 <= ord(c) < 127 or c in 'äöüõÄÖÜÕéÉíÍ')
+    # Ensure no extra newlines or quotes that would break the CSV
+    return s.strip().replace('\n', ' ').replace('\r', ' ')
 
 def sanitize_filename(name):
     """Sanitizes a string to be used as a filename."""
@@ -150,9 +148,9 @@ def write_to_csv(data, filename):
         return
 
     try:
-        # Use 'utf-8-sig' to include the BOM, which helps parsers correctly identify the encoding
         with open(filename, 'w', newline='', encoding='utf-8-sig') as csvfile:
-            writer = csv.writer(csvfile)
+            # Use the csv.writer with a comma delimiter
+            writer = csv.writer(csvfile, delimiter=',')
             # Write the header row
             writer.writerow(HEADERS)
             # Write the data rows
