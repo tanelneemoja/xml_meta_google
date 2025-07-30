@@ -9,6 +9,8 @@ import os
 URLS = [
     'https://www.teztour.ee/bestoffers/minprices.ee.html?departureCityId=3746&countryId=158976',
     'https://www.teztour.ee/bestoffers/minprices.ee.html?departureCityId=3746&countryId=1104',
+    'https://www.teztour.ee/bestoffers/minprices.ee.html?departureCityId=3746&countryId=7067498',
+    'https://www.teztour.ee/bestoffers/minprices.ee.html?departureCityId=3746&countryId=5732',
     # Add your other 4-5 URLs here.
 ]
 
@@ -61,11 +63,21 @@ def process_single_url(url):
     today_str = today.strftime('%d.%m.%Y')
     seven_days_later_str = seven_days_later.strftime('%d.%m.%Y')
 
-    # Changed from root.findall('item') to root.findall('.//item')
-    # This finds all 'item' tags anywhere in the XML tree.
     for item in root.findall('.//item'):
+        star_rating_raw = item.find('stars').text if item.find('stars') is not None else ""
+        
+        # --- NEW FILTERING LOGIC ---
+        # Extract the number from the star rating string
+        star_rating = star_rating_raw.split()[0] if star_rating_raw else ""
+        
+        # Check if the rating is a digit and between 1 and 5
+        if not star_rating.isdigit() or not (1 <= int(star_rating) <= 5):
+            print(f"Skipping hotel with invalid star rating: {star_rating_raw}")
+            continue # Skip to the next item in the XML feed
+        
+        # --- END OF NEW FILTERING LOGIC ---
+
         hotel_id = item.find('id').text if item.find('id') is not None else ""
-        star_rating = item.find('stars').text.split()[0] if item.find('stars') is not None else ""
         name = item.find('name').text if item.find('name') is not None else ""
         region = item.find('region').text if item.find('region') is not None else ""
         country = item.find('country').text if item.find('country') is not None else ""
@@ -94,7 +106,7 @@ def process_single_url(url):
         }
         processed_data.append(new_item)
     
-    print(f"Found {len(processed_data)} items in the XML feed.")
+    print(f"Found {len(processed_data)} valid hotels in the XML feed.")
     return country_from_feed, processed_data
 
 def write_to_csv(data, filename):
