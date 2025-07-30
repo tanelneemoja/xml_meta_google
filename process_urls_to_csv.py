@@ -23,22 +23,10 @@ country_coords = {
 
 # The meta headings for the final CSV file
 HEADERS = [
-    'hotel_id',
-    'star_rating',
-    'name',
-    'description',
-    'brand',
-    'address.addr1',
-    'address.city',
-    'address.region',
-    'address.country',
-    'address.postal_code',
-    'latitude',
-    'longitude',
-    'neighborhood[0]',
-    'base_price',
-    'image[0].url',
-    'url'
+    'hotel_id', 'star_rating', 'name', 'description', 'brand',
+    'address.addr1', 'address.city', 'address.region', 'address.country',
+    'address.postal_code', 'latitude', 'longitude', 'neighborhood[0]',
+    'base_price', 'image[0].url', 'url'
 ]
 
 def sanitize_filename(name):
@@ -52,8 +40,12 @@ def sanitize_filename(name):
 def process_single_url(url):
     """Downloads XML from a URL, processes it, and returns a tuple (country_name, list_of_dictionaries)."""
     print(f"Attempting to download XML from: {url}")
+    
+    # Add a User-Agent header to mimic a web browser
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
+    
     try:
-        response = requests.get(url)
+        response = requests.get(url, headers=headers)
         response.raise_for_status()
         root = ET.fromstring(response.content)
         print("Download successful.")
