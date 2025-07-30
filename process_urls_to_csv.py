@@ -11,17 +11,23 @@ URLS = [
     'https://www.teztour.ee/bestoffers/minprices.ee.html?departureCityId=3746&countryId=1104',
     'https://www.teztour.ee/bestoffers/minprices.ee.html?departureCityId=3746&countryId=7067498',
     'https://www.teztour.ee/bestoffers/minprices.ee.html?departureCityId=3746&countryId=5732',
-    # Add your other 4-5 URLs here.
 ]
 
-# Static data for country coordinates, using Estonian names
+# Static data for country coordinates, using the exact names found in the XML
 country_coords = {
     "Bulgaaria": {"lat": 42.7339, "lon": 25.4858},
-    "Türgi": {"lat": 38.96, "lon": 35.25},
+    "Тürgi": {"lat": 38.96, "lon": 35.25}, # Cyrillic T
     "Kreeka": {"lat": 39.00, "lon": 22.00},
     "Rhodos": {"lat": 39.00, "lon": 22.00},
     "Kreeta": {"lat": 39.00, "lon": 22.00},
-    "Egiptus": {"lat": 25.00, "lon": 31.00},
+    "Еgiptus": {"lat": 25.00, "lon": 31.00}, # Cyrillic E
+}
+
+# Mapping to convert Cyrillic country names to Latin for the CSV output
+country_name_mapping = {
+    "Тürgi": "Türgi",
+    "Еgiptus": "Egiptus",
+    # Add other mappings if needed
 }
 
 # The meta headings for the final CSV file
@@ -66,31 +72,34 @@ def process_single_url(url):
     for item in root.findall('.//item'):
         star_rating_raw = item.find('stars').text if item.find('stars') is not None else ""
         
-        # --- NEW FILTERING LOGIC ---
-        # Extract the number from the star rating string
         star_rating = star_rating_raw.split()[0] if star_rating_raw else ""
         
-        # Check if the rating is a digit and between 1 and 5
         if not star_rating.isdigit() or not (1 <= int(star_rating) <= 5):
             print(f"Skipping hotel with invalid star rating: {star_rating_raw}")
-            continue # Skip to the next item in the XML feed
-        
-        # --- END OF NEW FILTERING LOGIC ---
+            continue
 
         hotel_id = item.find('id').text if item.find('id') is not None else ""
         name = item.find('name').text if item.find('name') is not None else ""
         region = item.find('region').text if item.find('region') is not None else ""
-        country = item.find('country').text if item.find('country') is not None else ""
+        country_xml = item.find('country').text if item.find('country') is not None else ""
+
         price = item.find('price').text if item.find('price') is not None else ""
         photo_url = item.find('photo').text if item.find('photo') is not None else ""
         original_url = item.find('url').text if item.find('url') is not None else ""
 
-        if country_from_feed is None and country:
-            country_from_feed = country
+        if country_from_feed is None and country_xml:
+            country_from_feed = country_xml
 
-        coords = country_coords.get(country, {"lat": "", "lon": ""})
+        # Get coordinates using the XML's country name
+        coords = country_coords.get(country_xml, {"lat": "", "lon": ""})
         lat = coords.get("lat")
         lon = coords.get("lon")
+        
+        if not lat or not lon:
+            print(f"Warning: No coordinates found for country '{country_xml}'.")
+            
+        # Convert country name to Latin for the CSV output
+        country_latin = country_name_mapping.get(country_xml, country_xml)
 
         updated_url = original_url
         if original_url:
@@ -100,7 +109,8 @@ def process_single_url(url):
         new_item = {
             'hotel_id': hotel_id, 'star_rating': star_rating, 'name': name, 'description': name,
             'brand': name, 'address.addr1': region, 'address.city': region, 'address.region': region,
-            'address.country': country, 'address.postal_code': '00000', 'latitude': lat,
+            'address.country': country_latin, # Use the Latin version here
+            'address.postal_code': '00000', 'latitude': lat,
             'longitude': lon, 'neighborhood[0]': region, 'base_price': price,
             'image[0].url': photo_url, 'url': updated_url
         }
@@ -127,11 +137,12 @@ def write_to_csv(data, filename):
 if __name__ == "__main__":
     for i, url in enumerate(URLS):
         print(f"\n--- Starting processing for URL {i+1} ---")
-        country_name, processed_items = process_single_url(url)
+        country_name_xml, processed_items = process_single_url(url)
         
         if processed_items:
-            if country_name:
-                filename = f"{sanitize_filename(country_name)}.csv"
+            country_name_latin = country_name_mapping.get(country_name_xml, country_name_xml)
+            if country_name_latin:
+                filename = f"{sanitize_filename(country_name_latin)}.csv"
                 print(f"Generated filename: {filename}")
                 write_to_csv(processed_items, filename)
             else:
