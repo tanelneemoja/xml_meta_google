@@ -175,56 +175,63 @@ def write_to_csv(data, filename):
     except Exception as e:
         print(f"Error writing to CSV file {filename}: {e}")
 
-
 def write_to_xml(data, filename):
     """
     Writes a list of dictionaries to a new XML file with the provided Meta format,
-    using only the available data fields.
+    while keeping the original field names.
     """
     if not data:
         print(f"No data to write to {filename}.")
         return
 
     try:
-        listings = ET.Element('listings')
-        ET.SubElement(listings, 'title').text = 'TezTour Hotel Feed'
+        # Create the RSS and Channel structure
+        rss = ET.Element('rss', {
+            'xmlns:g': 'http://base.google.com/ns/1.0',
+            'version': '2.0'
+        })
+        channel = ET.SubElement(rss, 'channel')
         
+        # Add static channel info
+        ET.SubElement(channel, 'title').text = 'TezTour Hotel Catalog'
+        ET.SubElement(channel, 'link').text = 'https://www.teztour.ee'
+        ET.SubElement(channel, 'description').text = 'Hotel catalog for TezTour destinations'
+
+        # Map and add each item to the channel
         for item_data in data:
-            listing = ET.SubElement(listings, 'listing')
+            item = ET.SubElement(channel, 'item')
             
-            ET.SubElement(listing, 'hotel_id').text = item_data.get('hotel_id', '')
-            ET.SubElement(listing, 'name').text = item_data.get('name', '')
-            ET.SubElement(listing, 'description').text = item_data.get('description', '')
-            ET.SubElement(listing, 'brand').text = item_data.get('brand', '')
-            
-            # Nested address tag
-            address = ET.SubElement(listing, 'address', {'format': 'simple'})
-            ET.SubElement(address, 'component', {'name': 'addr1'}).text = item_data.get('address.addr1', '')
-            ET.SubElement(address, 'component', {'name': 'city'}).text = item_data.get('address.city', '')
-            ET.SubElement(address, 'component', {'name': 'region'}).text = item_data.get('address.region', '')
-            ET.SubElement(address, 'component', {'name': 'country'}).text = item_data.get('address.country', '')
-            ET.SubElement(address, 'component', {'name': 'postal_code'}).text = item_data.get('address.postal_code', '')
-            
-            ET.SubElement(listing, 'latitude').text = str(item_data.get('latitude', ''))
-            ET.SubElement(listing, 'longitude').text = str(item_data.get('longitude', ''))
-            ET.SubElement(listing, 'neighborhood').text = item_data.get('neighborhood[0]', '')
-            ET.SubElement(listing, 'base_price').text = item_data.get('base_price', '')
-            ET.SubElement(listing, 'star_rating').text = item_data.get('star_rating', '')
+            # Map internal dictionary keys to desired XML tag names
+            field_map = {
+                'hotel_id': 'id',
+                'star_rating': 'star_rating',
+                'name': 'name',
+                'description': 'description',
+                'brand': 'brand',
+                'address.addr1': 'address_addr1',
+                'address.city': 'address_city',
+                'address.region': 'address_region',
+                'address.country': 'address_country',
+                'address.postal_code': 'address_postal_code',
+                'latitude': 'latitude',
+                'longitude': 'longitude',
+                'neighborhood[0]': 'neighborhood',
+                'base_price': 'price',
+                'image[0].url': 'image_link',
+                'url': 'link'
+            }
 
-            # Nested image tag
-            image = ET.SubElement(listing, 'image')
-            ET.SubElement(image, 'url').text = item_data.get('image[0].url', '')
-
-            ET.SubElement(listing, 'url').text = item_data.get('url', '')
-
+            for key, tag_name in field_map.items():
+                element = ET.SubElement(item, tag_name)
+                element.text = str(item_data.get(key, ''))
+        
         # Write the tree to a file with a clean format
-        tree = ET.ElementTree(listings)
+        tree = ET.ElementTree(rss)
         tree.write(filename, encoding='utf-8', xml_declaration=True)
         
-        print(f"Successfully created XML file: {filename} with {len(data)} listings.")
+        print(f"Successfully created XML file: {filename} with {len(data)} hotels in new format.")
     except Exception as e:
         print(f"Error writing to XML file {filename}: {e}")
-
 
 if __name__ == "__main__":
     for url_info in URLS:
