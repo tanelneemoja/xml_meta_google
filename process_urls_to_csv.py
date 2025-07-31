@@ -110,11 +110,9 @@ def process_single_url(url):
         photo_url = item.find('photo').text.strip() if item.find('photo') is not None and item.find('photo').text else ""
         original_url = item.find('url').text.strip() if item.find('url') is not None and item.find('url').text else ""
 
-        # --- FINAL DIAGNOSTIC CHECK ---
         if ',' in photo_url:
             print(f"Warning: Skipping hotel {hotel_id_clean} due to a comma in the image URL.")
             continue
-        # -----------------------------
 
         if country_from_feed is None and country_xml:
             country_from_feed = country_xml
@@ -175,6 +173,8 @@ def write_to_csv(data, filename):
         print(f"Error writing to CSV file {filename}: {e}")
 
 if __name__ == "__main__":
+    all_combined_data = []
+    
     for i, url in enumerate(URLS):
         print(f"\n--- Starting processing for URL {i+1} ---")
         country_name_xml, processed_items = process_single_url(url)
@@ -185,11 +185,18 @@ if __name__ == "__main__":
                 filename = sanitize_filename(country_name_latin)
                 print(f"Generated filename: {filename}")
                 write_to_csv(processed_items, filename)
+                all_combined_data.extend(processed_items)
             else:
                 filename = f"catalogue_unknown_country_{i+1}.csv"
                 print(f"Warning: Could not determine country name. Generated filename: {filename}")
                 write_to_csv(processed_items, filename)
+                all_combined_data.extend(processed_items)
         else:
             print("No items to process from this URL.")
             
+    # Write the combined feed
+    if all_combined_data:
+        print("\n--- Writing combined feed ---")
+        write_to_csv(all_combined_data, 'combined_feed.csv')
+        
     print("\n--- Processing finished ---")
