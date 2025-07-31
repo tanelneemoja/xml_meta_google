@@ -40,11 +40,24 @@ HEADERS = [
 ]
 
 def sanitize_string(s):
-    """Sanitizes a string to contain only printable characters."""
+    """
+    Sanitizes a string to contain only standard printable ASCII characters
+    and a few common international characters.
+    """
     if not s:
         return ""
-    # Ensure no extra newlines or quotes that would break the CSV
-    return s.strip().replace('\n', ' ').replace('\r', ' ')
+    
+    # Remove leading/trailing whitespace
+    s = s.strip()
+    
+    # Replace newlines with spaces to prevent breaking the CSV row
+    s = s.replace('\n', ' ').replace('\r', ' ')
+    
+    # Use a regex to keep only alphanumeric, basic punctuation, and specific international characters
+    # This is a highly aggressive cleanup to remove any hidden or invalid characters
+    s = re.sub(r'[^\w\s\-\.\,\/\&\?\!\#\(\)\%\:äöüõÄÖÜÕ]', '', s)
+    
+    return s
 
 def sanitize_filename(name):
     """Sanitizes a string to be used as a filename, with a special case for 'greece'."""
