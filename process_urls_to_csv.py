@@ -186,11 +186,7 @@ if __name__ == "__main__":
                 print(f"Generated filename: {filename}")
                 write_to_csv(processed_items, filename)
 
-                # Only add to combined data if it's not Greece
-                if country_name_latin.lower() not in ['greece', 'kreeka']:
-                    all_combined_data.extend(processed_items)
-                else:
-                    print("Skipping Greece data for combined feed.")
+               
             else:
                 filename = f"catalogue_unknown_country_{i+1}.csv"
                 print(f"Warning: Could not determine country name. Generated filename: {filename}")
