@@ -27,10 +27,14 @@ country_coords = {
     "Еgiptus": {"lat": 25.00, "lon": 31.00}, # Cyrillic E
 }
 
-# Mapping to convert Cyrillic country names to Latin
+# Mapping to convert Cyrillic country names to Latin and English
 country_name_mapping = {
+    "Bulgaaria": "Bulgaria",
     "Тürgi": "Türgi",
-    "Еgiptus": "Egiptus",
+    "Kreeka": "Greece",
+    "Еgiptus": "Egypt",
+    "Rhodos": "Greece",
+    "Kreeta": "Greece",
 }
 
 # The meta headings for the final CSV file
@@ -292,14 +296,17 @@ if __name__ == "__main__":
             if country_name_xml == "Тürgi":
                 turkey_items = processed_data['turkey_specific_items']
                 turgi_items = processed_data['processed_items']
+                
+                # Combine both lists for the new turgi.csv and turgi.xml files
+                combined_turgi_list = turkey_items + turgi_items
 
-                print("\nProcessing Turkey-specific hotels...")
+                print("\nProcessing Turkey-specific hotels for separate files...")
                 write_to_csv(turkey_items, 'turkey.csv')
                 write_to_xml(turkey_items, 'turkey.xml')
 
-                print("\nProcessing other Türgi hotels...")
-                write_to_csv(turgi_items, 'turgi.csv')
-                write_to_xml(turgi_items, 'turgi.xml')
+                print("\nProcessing combined Türgi and Turkey hotels...")
+                write_to_csv(combined_turgi_list, 'turgi.csv')
+                write_to_xml(combined_turgi_list, 'turgi.xml')
             else:
                 processed_items = processed_data['processed_items']
                 if processed_items:
