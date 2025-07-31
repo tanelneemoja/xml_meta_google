@@ -203,7 +203,7 @@ def write_to_xml(data, filename):
             
             # Map internal dictionary keys to desired XML tag names
             field_map = {
-                'hotel_id': 'id',
+                'hotel_id': 'hotel_id',
                 'star_rating': 'star_rating',
                 'name': 'name',
                 'description': 'description',
