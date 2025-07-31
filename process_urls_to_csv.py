@@ -4,6 +4,7 @@ import csv
 from datetime import datetime, timedelta
 import re
 import os
+import io
 
 # List of URLs to process.
 URLS = [
@@ -12,7 +13,7 @@ URLS = [
     {'country_name': 'Kreeka', 'url': 'https://www.teztour.ee/bestoffers/minprices.ee.html?departureCityId=3746&countryId=7067498'},
     {'country_name': 'Еgiptus', 'url': 'https://www.teztour.ee/bestoffers/minprices.ee.html?departureCityId=3746&countryId=5732'},
 ]
- 
+
 # Static data for country coordinates, using the exact names found in the XML
 country_coords = {
     "Bulgaaria": {"lat": 42.7339, "lon": 25.4858},
@@ -25,10 +26,8 @@ country_coords = {
 
 # Mapping to convert Cyrillic country names to Latin
 country_name_mapping = {
-    "Тürgi": "Turkey",
-    "Еgiptus": "Egypt",
-    "Kreeka": "Greece",
-    "Bulgaaria": "Bulgaria",
+    "Тürgi": "Türgi",
+    "Еgiptus": "Egiptus",
 }
 
 # The meta headings for the final CSV file
@@ -64,7 +63,31 @@ def sanitize_filename(name, extension):
         return f'greece{extension}'
     return f"{name}{extension}"
 
-def process_single_url(url_info):
+def fetch_hotel_ids_from_sheet(sheet_url):
+    """Fetches hotel IDs from a public Google Sheet converted to a CSV URL."""
+    try:
+        response = requests.get(sheet_url)
+        response.raise_for_status()
+        csv_data = response.text
+        
+        # Use io.StringIO to treat the string as a file
+        csv_file = io.StringIO(csv_data)
+        reader = csv.reader(csv_file)
+        
+        # Skip header and get the hotel IDs from the first column
+        next(reader, None)  # Skip header row
+        hotel_ids = {row[0].strip() for row in reader if row}
+        
+        print(f"Successfully fetched {len(hotel_ids)} hotel IDs from the Google Sheet.")
+        return hotel_ids
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching Google Sheet data: {e}")
+        return set()
+    except Exception as e:
+        print(f"Error parsing Google Sheet CSV: {e}")
+        return set()
+
+def process_single_url(url_info, turkey_hotels_from_sheet):
     """Downloads XML from a URL, processes it, and returns a tuple (country_name, list_of_dictionaries)."""
     print(f"Attempting to download XML for {url_info['country_name']} from: {url_info['url']}")
     
@@ -137,6 +160,14 @@ def process_single_url(url_info):
         currency_code = currency.group(0) if currency else 'EUR'
         price = re.sub(r'[^\d.]', '', price_text) + ' ' + currency_code
 
+        # --- NEW LOGIC: Check for hotel ID and set country accordingly ---
+        final_country = country_latin
+        if country_xml == "Тürgi":
+            if hotel_id in turkey_hotels_from_sheet:
+                final_country = "Turkey"
+            else:
+                final_country = "Türgi"
+        
         new_item = {
             'hotel_id': sanitize_string(hotel_id),
             'star_rating': sanitize_string(star_rating),
@@ -146,7 +177,7 @@ def process_single_url(url_info):
             'address.addr1': sanitize_string(region),
             'address.city': sanitize_string(region),
             'address.region': sanitize_string(region),
-            'address.country': sanitize_string(country_latin),
+            'address.country': sanitize_string(final_country),
             'address.postal_code': sanitize_string('00000'),
             'latitude': lat,
             'longitude': lon,
@@ -236,8 +267,12 @@ def write_to_xml(data, filename):
         print(f"Error writing to XML file {filename}: {e}")
 
 if __name__ == "__main__":
+    # URL for the Google Sheet's CSV export
+    GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/1VTHXw3LJqOt-H1T3wSVcMmyNxPnX6Ihidx8ptHdfL_0/export?format=csv&gid=930911573"
+    turkey_hotels_from_sheet = fetch_hotel_ids_from_sheet(GOOGLE_SHEET_URL)
+
     for url_info in URLS:
-        country_name_xml, processed_items = process_single_url(url_info)
+        country_name_xml, processed_items = process_single_url(url_info, turkey_hotels_from_sheet)
         
         if processed_items:
             country_name_latin = country_name_mapping.get(country_name_xml, country_name_xml)
