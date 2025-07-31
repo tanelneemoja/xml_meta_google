@@ -171,11 +171,12 @@ def write_to_csv(data, filename):
         print(f"Error writing to CSV file {filename}: {e}")
 
 def write_to_xml(data, filename):
-    """Writes a list of dictionaries to an XML file."""
+    """Writes a list of dictionaries to an XML file with error handling."""
     if not data:
         print(f"No data to write to {filename}.")
         return
     
+    print(f"Attempting to write XML file: {filename}...")
     try:
         root = ET.Element('hotels')
         for item in data:
@@ -186,9 +187,9 @@ def write_to_xml(data, filename):
                 element = ET.SubElement(hotel_element, xml_key)
                 element.text = str(value)
         
+        # Write the tree to a file with an XML declaration
         tree = ET.ElementTree(root)
-        # Add a proper XML declaration
-        ET.ElementTree(root).write(filename, encoding='utf-8', xml_declaration=True)
+        tree.write(filename, encoding='utf-8', xml_declaration=True)
         
         print(f"Successfully created XML file: {filename} with {len(data)} hotels.")
     except Exception as e:
