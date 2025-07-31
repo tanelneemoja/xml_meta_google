@@ -14,6 +14,9 @@ URLS = [
     {'country_name': 'Еgiptus', 'url': 'https://www.teztour.ee/bestoffers/minprices.ee.html?departureCityId=3746&countryId=5732'},
 ]
 
+# URL for the Google Sheet's CSV export
+GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/1VTHXw3LJqOt-H1T3wSVcMmyNxPnX6Ihidx8ptHdfL_0/export?format=csv&gid=930911573"
+
 # Static data for country coordinates, using the exact names found in the XML
 country_coords = {
     "Bulgaaria": {"lat": 42.7339, "lon": 25.4858},
@@ -88,7 +91,10 @@ def fetch_hotel_ids_from_sheet(sheet_url):
         return set()
 
 def process_single_url(url_info, turkey_hotels_from_sheet):
-    """Downloads XML from a URL, processes it, and returns a tuple (country_name, list_of_dictionaries)."""
+    """
+    Downloads XML from a URL, processes it, and returns a dictionary of processed data lists.
+    For the Turkey feed, it returns two separate lists.
+    """
     print(f"Attempting to download XML for {url_info['country_name']} from: {url_info['url']}")
     
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
@@ -100,9 +106,11 @@ def process_single_url(url_info, turkey_hotels_from_sheet):
         print("Download successful.")
     except (requests.exceptions.RequestException, ET.ParseError) as e:
         print(f"Error fetching or parsing XML from {url_info['url']}: {e}")
-        return None, None
+        return {'country_name_xml': None, 'processed_items': []}
 
     processed_data = []
+    turkey_specific_data = []
+    
     country_from_feed = None
     
     today = datetime.now()
@@ -159,14 +167,6 @@ def process_single_url(url_info, turkey_hotels_from_sheet):
         currency = re.search(r'[A-Z]{3}', price_text)
         currency_code = currency.group(0) if currency else 'EUR'
         price = re.sub(r'[^\d.]', '', price_text) + ' ' + currency_code
-
-        # --- NEW LOGIC: Check for hotel ID and set country accordingly ---
-        final_country = country_latin
-        if country_xml == "Тürgi":
-            if hotel_id in turkey_hotels_from_sheet:
-                final_country = "Turkey"
-            else:
-                final_country = "Türgi"
         
         new_item = {
             'hotel_id': sanitize_string(hotel_id),
@@ -177,7 +177,7 @@ def process_single_url(url_info, turkey_hotels_from_sheet):
             'address.addr1': sanitize_string(region),
             'address.city': sanitize_string(region),
             'address.region': sanitize_string(region),
-            'address.country': sanitize_string(final_country),
+            'address.country': sanitize_string(country_latin),
             'address.postal_code': sanitize_string('00000'),
             'latitude': lat,
             'longitude': lon,
@@ -186,10 +186,24 @@ def process_single_url(url_info, turkey_hotels_from_sheet):
             'image[0].url': sanitize_string(photo_url),
             'url': sanitize_string(updated_url)
         }
-        processed_data.append(new_item)
-    
-    print(f"Found {len(processed_data)} valid hotels in the XML feed.")
-    return country_from_feed, processed_data
+        
+        # --- NEW LOGIC: Split the Turkey feed into two lists ---
+        if country_xml == "Тürgi":
+            if hotel_id in turkey_hotels_from_sheet:
+                new_item['address.country'] = "Turkey"
+                turkey_specific_data.append(new_item)
+            else:
+                new_item['address.country'] = "Türgi"
+                processed_data.append(new_item)
+        else:
+            processed_data.append(new_item)
+
+    print(f"Found {len(processed_data) + len(turkey_specific_data)} valid hotels in the XML feed.")
+
+    if country_from_feed == "Тürgi":
+        return {'country_name_xml': country_from_feed, 'processed_items': processed_data, 'turkey_specific_items': turkey_specific_data}
+    else:
+        return {'country_name_xml': country_from_feed, 'processed_items': processed_data}
 
 def write_to_csv(data, filename):
     """Writes a list of dictionaries to a CSV file."""
@@ -267,24 +281,38 @@ def write_to_xml(data, filename):
         print(f"Error writing to XML file {filename}: {e}")
 
 if __name__ == "__main__":
-    # URL for the Google Sheet's CSV export
-    GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/1VTHXw3LJqOt-H1T3wSVcMmyNxPnX6Ihidx8ptHdfL_0/export?format=csv&gid=930911573"
     turkey_hotels_from_sheet = fetch_hotel_ids_from_sheet(GOOGLE_SHEET_URL)
 
     for url_info in URLS:
-        country_name_xml, processed_items = process_single_url(url_info, turkey_hotels_from_sheet)
+        processed_data = process_single_url(url_info, turkey_hotels_from_sheet)
         
-        if processed_items:
-            country_name_latin = country_name_mapping.get(country_name_xml, country_name_xml)
-            if country_name_latin:
-                csv_filename = sanitize_filename(country_name_latin, '.csv')
-                xml_filename = sanitize_filename(country_name_latin, '.xml')
-                
-                print(f"Processing for {country_name_latin}...")
-                write_to_csv(processed_items, csv_filename)
-                write_to_xml(processed_items, xml_filename)
+        if processed_data:
+            country_name_xml = processed_data['country_name_xml']
+            
+            if country_name_xml == "Тürgi":
+                turkey_items = processed_data['turkey_specific_items']
+                turgi_items = processed_data['processed_items']
+
+                print("\nProcessing Turkey-specific hotels...")
+                write_to_csv(turkey_items, 'turkey.csv')
+                write_to_xml(turkey_items, 'turkey.xml')
+
+                print("\nProcessing other Türgi hotels...")
+                write_to_csv(turgi_items, 'turgi.csv')
+                write_to_xml(turgi_items, 'turgi.xml')
             else:
-                print("Warning: Could not determine country name from feed.")
+                processed_items = processed_data['processed_items']
+                if processed_items:
+                    country_name_latin = country_name_mapping.get(country_name_xml, country_name_xml)
+                    if country_name_latin:
+                        csv_filename = sanitize_filename(country_name_latin, '.csv')
+                        xml_filename = sanitize_filename(country_name_latin, '.xml')
+                        
+                        print(f"\nProcessing for {country_name_latin}...")
+                        write_to_csv(processed_items, csv_filename)
+                        write_to_xml(processed_items, xml_filename)
+                    else:
+                        print("Warning: Could not determine country name from feed.")
         else:
             print(f"No items to process from {url_info['country_name']} URL.")
             
