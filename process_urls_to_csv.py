@@ -47,14 +47,8 @@ def sanitize_string(s):
     if not s:
         return ""
     
-    # Remove leading/trailing whitespace
     s = s.strip()
-    
-    # Replace newlines with spaces to prevent breaking the CSV row
     s = s.replace('\n', ' ').replace('\r', ' ')
-    
-    # Use a regex to keep only alphanumeric, basic punctuation, and specific international characters
-    # This is a highly aggressive cleanup to remove any hidden or invalid characters
     s = re.sub(r'[^\w\s\-\.\,\/\&\?\!\#\(\)\%\:äöüõÄÖÜÕ]', '', s)
     
     return s
@@ -116,6 +110,12 @@ def process_single_url(url):
         photo_url = item.find('photo').text.strip() if item.find('photo') is not None and item.find('photo').text else ""
         original_url = item.find('url').text.strip() if item.find('url') is not None and item.find('url').text else ""
 
+        # --- FINAL DIAGNOSTIC CHECK ---
+        if ',' in photo_url:
+            print(f"Warning: Skipping hotel {hotel_id_clean} due to a comma in the image URL.")
+            continue
+        # -----------------------------
+
         if country_from_feed is None and country_xml:
             country_from_feed = country_xml
 
@@ -165,13 +165,9 @@ def write_to_csv(data, filename):
 
     try:
         with open(filename, 'w', newline='', encoding='utf-8-sig') as csvfile:
-            # Use the csv.writer with a comma delimiter
             writer = csv.writer(csvfile, delimiter=',')
-            # Write the header row
             writer.writerow(HEADERS)
-            # Write the data rows
             for item in data:
-                # Manually build the row as a list, ensuring all values are strings
                 row = [item.get(header, '') for header in HEADERS]
                 writer.writerow(row)
         print(f"Successfully created {filename} with {len(data)} rows.")
