@@ -7,10 +7,10 @@ import os
 
 # List of URLs to process.
 URLS = [
-    'https://www.teztour.ee/bestoffers/minprices.ee.html?departureCityId=3746&countryId=158976', # Bulgaria
-    'https://www.teztour.ee/bestoffers/minprices.ee.html?departureCityId=3746&countryId=1104', # Turkey
-    'https://www.teztour.ee/bestoffers/minprices.ee.html?departureCityId=3746&countryId=7067498', # Greece (This will be skipped for the combined file)
-    'https://www.teztour.ee/bestoffers/minprices.ee.html?departureCityId=3746&countryId=5732', # Egypt
+    'https://www.teztour.ee/bestoffers/minprices.ee.html?departureCityId=3746&countryId=158976',
+    'https://www.teztour.ee/bestoffers/minprices.ee.html?departureCityId=3746&countryId=1104',
+    'https://www.teztour.ee/bestoffers/minprices.ee.html?departureCityId=3746&countryId=7067498',
+    'https://www.teztour.ee/bestoffers/minprices.ee.html?departureCityId=3746&countryId=5732',
 ]
 
 # Static data for country coordinates, using the exact names found in the XML
@@ -185,8 +185,7 @@ if __name__ == "__main__":
                 filename = sanitize_filename(country_name_latin)
                 print(f"Generated filename: {filename}")
                 write_to_csv(processed_items, filename)
-
-               
+                all_combined_data.extend(processed_items)
             else:
                 filename = f"catalogue_unknown_country_{i+1}.csv"
                 print(f"Warning: Could not determine country name. Generated filename: {filename}")
@@ -197,7 +196,7 @@ if __name__ == "__main__":
             
     # Write the combined feed
     if all_combined_data:
-        print("\n--- Writing combined feed (without Greece) ---")
-        write_to_csv(all_combined_data, 'combined_feed_without_greece.csv')
+        print("\n--- Writing combined feed ---")
+        write_to_csv(all_combined_data, 'combined_feed.csv')
         
     print("\n--- Processing finished ---")
