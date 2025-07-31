@@ -15,7 +15,7 @@ URLS = [
 ]
 
 # URL for the Google Sheet's CSV export
-GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/1VTHXw3LJqOt-H1T3wSVcMmyNxPnX6Ihidx8ptHdfL_0/export?format=csv&gid=930911573"
+GOOGLE_SHEET_URL = "https://docs.google.com/spreadsheets/d/1VTHXw3LJqOt-H1T3wSVcMmyNxPnX6Ihidx8ptHdfL_0/export?format=csv&gid=0"
 
 # Static data for country coordinates, using the exact names found in the XML
 country_coords = {
@@ -187,7 +187,7 @@ def process_single_url(url_info, turkey_hotels_from_sheet):
             'url': sanitize_string(updated_url)
         }
         
-        # --- NEW LOGIC: Split the Turkey feed into two lists ---
+        # --- LOGIC: Split the Turkey feed into two lists ---
         if country_xml == "Тürgi":
             if hotel_id in turkey_hotels_from_sheet:
                 new_item['address.country'] = "Turkey"
