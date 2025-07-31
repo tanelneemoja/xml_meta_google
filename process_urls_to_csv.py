@@ -25,8 +25,10 @@ country_coords = {
 
 # Mapping to convert Cyrillic country names to Latin
 country_name_mapping = {
-    "Тürgi": "Türgi",
-    "Еgiptus": "Egiptus",
+    "Тürgi": "Turkey",
+    "Еgiptus": "Egypt",
+    "Kreeka": "Greece",
+    "Bulgaaria": "Bulgaria",
 }
 
 # The meta headings for the final CSV file
