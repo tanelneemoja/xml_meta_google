@@ -7,10 +7,10 @@ import os
 
 # List of URLs to process.
 URLS = [
-    'https://www.teztour.ee/bestoffers/minprices.ee.html?departureCityId=3746&countryId=158976',
-    'https://www.teztour.ee/bestoffers/minprices.ee.html?departureCityId=3746&countryId=1104',
-    'https://www.teztour.ee/bestoffers/minprices.ee.html?departureCityId=3746&countryId=7067498',
-    'https://www.teztour.ee/bestoffers/minprices.ee.html?departureCityId=3746&countryId=5732',
+    {'country_name': 'Bulgaaria', 'url': 'https://www.teztour.ee/bestoffers/minprices.ee.html?departureCityId=3746&countryId=158976'},
+    {'country_name': 'Тürgi', 'url': 'https://www.teztour.ee/bestoffers/minprices.ee.html?departureCityId=3746&countryId=1104'},
+    {'country_name': 'Kreeka', 'url': 'https://www.teztour.ee/bestoffers/minprices.ee.html?departureCityId=3746&countryId=7067498'},
+    {'country_name': 'Еgiptus', 'url': 'https://www.teztour.ee/bestoffers/minprices.ee.html?departureCityId=3746&countryId=5732'},
 ]
 
 # Static data for country coordinates, using the exact names found in the XML
@@ -27,11 +27,10 @@ country_coords = {
 country_name_mapping = {
     "Тürgi": "Türgi",
     "Еgiptus": "Egiptus",
-    # Add other mappings if needed
 }
 
 # The meta headings for the final CSV file
-HEADERS = [
+CSV_HEADERS = [
     'hotel_id',
     'star_rating', 'name', 'description', 'brand',
     'address.addr1', 'address.city', 'address.region', 'address.country',
@@ -41,8 +40,8 @@ HEADERS = [
 
 def sanitize_string(s):
     """
-    Sanitizes a string to contain only standard printable ASCII characters
-    and a few common international characters.
+    Sanitizes a string to contain only standard printable characters,
+    preventing CSV/XML parsing errors.
     """
     if not s:
         return ""
@@ -53,30 +52,29 @@ def sanitize_string(s):
     
     return s
 
-def sanitize_filename(name):
-    """Sanitizes a string to be used as a filename, with a special case for 'greece'."""
-    if name.lower() == 'kreeka':
-        return 'greece.csv'
-        
+def sanitize_filename(name, extension):
+    """Sanitizes a string to be used as a filename."""
     name = name.lower()
     name = re.sub(r'\s+', '_', name)
     name = re.sub(r'[^a-z0-9_.-]', '', name)
     name = name.strip('_')
-    return f"{name}.csv"
+    if name == 'kreeka':
+        return f'greece{extension}'
+    return f"{name}{extension}"
 
-def process_single_url(url):
+def process_single_url(url_info):
     """Downloads XML from a URL, processes it, and returns a tuple (country_name, list_of_dictionaries)."""
-    print(f"Attempting to download XML from: {url}")
+    print(f"Attempting to download XML for {url_info['country_name']} from: {url_info['url']}")
     
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
     
     try:
-        response = requests.get(url, headers=headers)
+        response = requests.get(url_info['url'], headers=headers)
         response.raise_for_status()
         root = ET.fromstring(response.content)
         print("Download successful.")
     except (requests.exceptions.RequestException, ET.ParseError) as e:
-        print(f"Error fetching or parsing XML from {url}: {e}")
+        print(f"Error fetching or parsing XML from {url_info['url']}: {e}")
         return None, None
 
     processed_data = []
@@ -156,7 +154,7 @@ def process_single_url(url):
     return country_from_feed, processed_data
 
 def write_to_csv(data, filename):
-    """Writes a list of dictionaries to a CSV file using a rebuilt method."""
+    """Writes a list of dictionaries to a CSV file."""
     if not data:
         print(f"No data to write to {filename}.")
         return
@@ -164,39 +162,54 @@ def write_to_csv(data, filename):
     try:
         with open(filename, 'w', newline='', encoding='utf-8-sig') as csvfile:
             writer = csv.writer(csvfile, delimiter=',')
-            writer.writerow(HEADERS)
+            writer.writerow(CSV_HEADERS)
             for item in data:
-                row = [item.get(header, '') for header in HEADERS]
+                row = [item.get(header, '') for header in CSV_HEADERS]
                 writer.writerow(row)
-        print(f"Successfully created {filename} with {len(data)} rows.")
+        print(f"Successfully created CSV file: {filename} with {len(data)} rows.")
     except Exception as e:
         print(f"Error writing to CSV file {filename}: {e}")
 
-if __name__ == "__main__":
-    all_combined_data = []
+def write_to_xml(data, filename):
+    """Writes a list of dictionaries to an XML file."""
+    if not data:
+        print(f"No data to write to {filename}.")
+        return
     
-    for i, url in enumerate(URLS):
-        print(f"\n--- Starting processing for URL {i+1} ---")
-        country_name_xml, processed_items = process_single_url(url)
+    try:
+        root = ET.Element('hotels')
+        for item in data:
+            hotel_element = ET.SubElement(root, 'hotel')
+            for key, value in item.items():
+                # Clean up the key to be a valid XML tag name
+                xml_key = key.replace('.', '_').replace('[0]', '')
+                element = ET.SubElement(hotel_element, xml_key)
+                element.text = str(value)
+        
+        tree = ET.ElementTree(root)
+        # Add a proper XML declaration
+        ET.ElementTree(root).write(filename, encoding='utf-8', xml_declaration=True)
+        
+        print(f"Successfully created XML file: {filename} with {len(data)} hotels.")
+    except Exception as e:
+        print(f"Error writing to XML file {filename}: {e}")
+
+if __name__ == "__main__":
+    for url_info in URLS:
+        country_name_xml, processed_items = process_single_url(url_info)
         
         if processed_items:
             country_name_latin = country_name_mapping.get(country_name_xml, country_name_xml)
             if country_name_latin:
-                filename = sanitize_filename(country_name_latin)
-                print(f"Generated filename: {filename}")
-                write_to_csv(processed_items, filename)
-                all_combined_data.extend(processed_items)
+                csv_filename = sanitize_filename(country_name_latin, '.csv')
+                xml_filename = sanitize_filename(country_name_latin, '.xml')
+                
+                print(f"Processing for {country_name_latin}...")
+                write_to_csv(processed_items, csv_filename)
+                write_to_xml(processed_items, xml_filename)
             else:
-                filename = f"catalogue_unknown_country_{i+1}.csv"
-                print(f"Warning: Could not determine country name. Generated filename: {filename}")
-                write_to_csv(processed_items, filename)
-                all_combined_data.extend(processed_items)
+                print("Warning: Could not determine country name from feed.")
         else:
-            print("No items to process from this URL.")
+            print(f"No items to process from {url_info['country_name']} URL.")
             
-    # Write the combined feed
-    if all_combined_data:
-        print("\n--- Writing combined feed ---")
-        write_to_csv(all_combined_data, 'combined_feed.csv')
-        
     print("\n--- Processing finished ---")
