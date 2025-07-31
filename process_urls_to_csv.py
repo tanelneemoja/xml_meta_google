@@ -104,7 +104,7 @@ def process_single_url(url_info):
         region = item.find('region').text.strip() if item.find('region') is not None and item.find('region').text else ""
         country_xml = item.find('country').text.strip() if item.find('country') is not None and item.find('country').text else ""
 
-        price = item.find('price').text.strip() if item.find('price') is not None and item.find('price').text else ""
+        price_text = item.find('price').text.strip() if item.find('price') is not None and item.find('price').text else ""
         photo_url = item.find('photo').text.strip() if item.find('photo') is not None and item.find('photo').text else ""
         original_url = item.find('url').text.strip() if item.find('url') is not None and item.find('url').text else ""
 
@@ -129,6 +129,11 @@ def process_single_url(url_info):
         if original_url:
             updated_url = re.sub(r'after/\d{2}\.\d{2}\.\d{4}', f'after/{today_str}', original_url)
             updated_url = re.sub(r'before/\d{2}\.\d{2}\.\d{4}', f'before/{seven_days_later_str}', updated_url)
+        
+        # Extract currency from price string
+        currency = re.search(r'[A-Z]{3}', price_text)
+        currency_code = currency.group(0) if currency else 'EUR'
+        price = re.sub(r'[^\d.]', '', price_text) + ' ' + currency_code
 
         new_item = {
             'hotel_id': sanitize_string(hotel_id),
@@ -170,30 +175,56 @@ def write_to_csv(data, filename):
     except Exception as e:
         print(f"Error writing to CSV file {filename}: {e}")
 
+
 def write_to_xml(data, filename):
-    """Writes a list of dictionaries to an XML file with error handling."""
+    """
+    Writes a list of dictionaries to a new XML file with the provided Meta format,
+    using only the available data fields.
+    """
     if not data:
         print(f"No data to write to {filename}.")
         return
-    
-    print(f"Attempting to write XML file: {filename}...")
+
     try:
-        root = ET.Element('hotels')
-        for item in data:
-            hotel_element = ET.SubElement(root, 'hotel')
-            for key, value in item.items():
-                # Clean up the key to be a valid XML tag name
-                xml_key = key.replace('.', '_').replace('[0]', '')
-                element = ET.SubElement(hotel_element, xml_key)
-                element.text = str(value)
+        listings = ET.Element('listings')
+        ET.SubElement(listings, 'title').text = 'TezTour Hotel Feed'
         
-        # Write the tree to a file with an XML declaration
-        tree = ET.ElementTree(root)
+        for item_data in data:
+            listing = ET.SubElement(listings, 'listing')
+            
+            ET.SubElement(listing, 'hotel_id').text = item_data.get('hotel_id', '')
+            ET.SubElement(listing, 'name').text = item_data.get('name', '')
+            ET.SubElement(listing, 'description').text = item_data.get('description', '')
+            ET.SubElement(listing, 'brand').text = item_data.get('brand', '')
+            
+            # Nested address tag
+            address = ET.SubElement(listing, 'address', {'format': 'simple'})
+            ET.SubElement(address, 'component', {'name': 'addr1'}).text = item_data.get('address.addr1', '')
+            ET.SubElement(address, 'component', {'name': 'city'}).text = item_data.get('address.city', '')
+            ET.SubElement(address, 'component', {'name': 'region'}).text = item_data.get('address.region', '')
+            ET.SubElement(address, 'component', {'name': 'country'}).text = item_data.get('address.country', '')
+            ET.SubElement(address, 'component', {'name': 'postal_code'}).text = item_data.get('address.postal_code', '')
+            
+            ET.SubElement(listing, 'latitude').text = str(item_data.get('latitude', ''))
+            ET.SubElement(listing, 'longitude').text = str(item_data.get('longitude', ''))
+            ET.SubElement(listing, 'neighborhood').text = item_data.get('neighborhood[0]', '')
+            ET.SubElement(listing, 'base_price').text = item_data.get('base_price', '')
+            ET.SubElement(listing, 'star_rating').text = item_data.get('star_rating', '')
+
+            # Nested image tag
+            image = ET.SubElement(listing, 'image')
+            ET.SubElement(image, 'url').text = item_data.get('image[0].url', '')
+
+            ET.SubElement(listing, 'url').text = item_data.get('url', '')
+
+        # Write the tree to a file with a clean format
+        tree = ET.ElementTree(listings)
         tree.write(filename, encoding='utf-8', xml_declaration=True)
         
-        print(f"Successfully created XML file: {filename} with {len(data)} hotels.")
+        print(f"Successfully created XML file: {filename} with {len(data)} listings.")
     except Exception as e:
         print(f"Error writing to XML file {filename}: {e}")
+
 
 if __name__ == "__main__":
     for url_info in URLS:
