@@ -12,7 +12,7 @@ URLS = [
     {'country_name': 'Kreeka', 'url': 'https://www.teztour.ee/bestoffers/minprices.ee.html?departureCityId=3746&countryId=7067498'},
     {'country_name': 'Еgiptus', 'url': 'https://www.teztour.ee/bestoffers/minprices.ee.html?departureCityId=3746&countryId=5732'},
 ]
-
+ 
 # Static data for country coordinates, using the exact names found in the XML
 country_coords = {
     "Bulgaaria": {"lat": 42.7339, "lon": 25.4858},
