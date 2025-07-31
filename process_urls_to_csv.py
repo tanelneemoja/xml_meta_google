@@ -47,12 +47,15 @@ def sanitize_string(s):
     return s.strip().replace('\n', ' ').replace('\r', ' ')
 
 def sanitize_filename(name):
-    """Sanitizes a string to be used as a filename."""
+    """Sanitizes a string to be used as a filename, with a special case for 'greece'."""
+    if name.lower() == 'kreeka':
+        return 'greece.csv'
+        
     name = name.lower()
     name = re.sub(r'\s+', '_', name)
     name = re.sub(r'[^a-z0-9_.-]', '', name)
     name = name.strip('_')
-    return name
+    return f"{name}.csv"
 
 def process_single_url(url):
     """Downloads XML from a URL, processes it, and returns a tuple (country_name, list_of_dictionaries)."""
@@ -142,7 +145,7 @@ def process_single_url(url):
     return country_from_feed, processed_data
 
 def write_to_csv(data, filename):
-    """Writes a list of dictionaries to a CSV file using a robust method."""
+    """Writes a list of dictionaries to a CSV file using a rebuilt method."""
     if not data:
         print(f"No data to write to {filename}.")
         return
@@ -155,6 +158,7 @@ def write_to_csv(data, filename):
             writer.writerow(HEADERS)
             # Write the data rows
             for item in data:
+                # Manually build the row as a list, ensuring all values are strings
                 row = [item.get(header, '') for header in HEADERS]
                 writer.writerow(row)
         print(f"Successfully created {filename} with {len(data)} rows.")
@@ -169,7 +173,7 @@ if __name__ == "__main__":
         if processed_items:
             country_name_latin = country_name_mapping.get(country_name_xml, country_name_xml)
             if country_name_latin:
-                filename = f"{sanitize_filename(country_name_latin)}.csv"
+                filename = sanitize_filename(country_name_latin)
                 print(f"Generated filename: {filename}")
                 write_to_csv(processed_items, filename)
             else:
