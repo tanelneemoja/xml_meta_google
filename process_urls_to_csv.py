@@ -1,7 +1,6 @@
 import requests
 import xml.etree.ElementTree as ET
 import csv
-from datetime import datetime, timedelta
 import re
 import os
 import io
@@ -116,11 +115,6 @@ def process_single_url(url_info, turkey_hotels_from_sheet):
     turkey_specific_data = []
     
     country_from_feed = None
-    
-    today = datetime.now()
-    seven_days_later = today + timedelta(days=7)
-    today_str = today.strftime('%d.%m.%Y')
-    seven_days_later_str = seven_days_later.strftime('%d.%m.%Y')
 
     for item in root.findall('.//item'):
         star_rating_raw = item.find('stars').text if item.find('stars') is not None else ""
@@ -163,9 +157,6 @@ def process_single_url(url_info, turkey_hotels_from_sheet):
         
         hotel_id = hotel_id_clean
         updated_url = original_url
-        if original_url:
-            updated_url = re.sub(r'after/\d{2}\.\d{2}\.\d{4}', f'after/{today_str}', original_url)
-            updated_url = re.sub(r'before/\d{2}\.\d{2}\.\d{4}', f'before/{seven_days_later_str}', updated_url)
         
         # Extract currency from price string
         currency = re.search(r'[A-Z]{3}', price_text)
