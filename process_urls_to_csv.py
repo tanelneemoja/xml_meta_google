@@ -341,12 +341,11 @@ if __name__ == "__main__":
                 print("\nProcessing Turkey-specific hotels for separate files...")
                 write_to_csv(turkey_items, 'turkey.csv')
                 write_to_xml(turkey_items, 'turkey.xml')
-                write_to_google_csv(turkey_items, 'turkey_google.csv')
 
                 print("\nProcessing combined Türgi and Turkey hotels...")
                 write_to_csv(combined_turgi_list, 'turgi.csv')
                 write_to_xml(combined_turgi_list, 'turgi.xml')
-                write_to_google_csv(combined_turgi_list, 'turgi_google.csv')
+                write_to_google_csv(combined_turgi_list, 'turkey_google.csv')
             else:
                 processed_items = processed_data['processed_items']
                 if processed_items:
