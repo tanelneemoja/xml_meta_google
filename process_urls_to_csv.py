@@ -45,6 +45,14 @@ CSV_HEADERS = [
     'base_price', 'image[0].url', 'url'
 ]
 
+# New headers for the Google-specific CSV file
+GOOGLE_CSV_HEADERS = [
+    'Property ID', 'Property name', 'Final URL', 'Image URL', 'Destination name',
+    'Description', 'Price', 'Sale price', 'Star rating', 'Category',
+    'Contextual keywords', 'Address', 'Tracking template', 'Custom parameter',
+    'Final mobile URL', 'Android app link', 'iOS app link', 'iOS app store ID'
+]
+
 def sanitize_string(s):
     """
     Sanitizes a string to contain only standard printable characters,
@@ -81,7 +89,7 @@ def fetch_hotel_ids_from_sheet(sheet_url):
         reader = csv.reader(csv_file)
         
         # Skip header and get the hotel IDs from the first column
-        next(reader, None)  # Skip header row
+        next(reader, None) # Skip header row
         hotel_ids = {row[0].strip() for row in reader if row}
         
         print(f"Successfully fetched {len(hotel_ids)} hotel IDs from the Google Sheet.")
@@ -217,6 +225,45 @@ def write_to_csv(data, filename):
     except Exception as e:
         print(f"Error writing to CSV file {filename}: {e}")
 
+def write_to_google_csv(data, filename):
+    """
+    Writes a list of dictionaries to a new CSV file formatted for Google Hotel Ads.
+    """
+    if not data:
+        print(f"No Google-specific data to write to {filename}.")
+        return
+
+    try:
+        with open(filename, 'w', newline='', encoding='utf-8-sig') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=GOOGLE_CSV_HEADERS, delimiter=',')
+            writer.writeheader()
+            for item in data:
+                row = {
+                    'Property ID': item.get('hotel_id', ''),
+                    'Property name': item.get('name', ''),
+                    'Final URL': item.get('url', ''),
+                    'Image URL': item.get('image[0].url', ''),
+                    'Destination name': item.get('address.region', ''),  # Changed to use region
+                    'Description': item.get('description', ''),
+                    'Price': item.get('base_price', ''),
+                    'Sale price': '', # Not provided in the source XML, leave blank
+                    'Star rating': item.get('star_rating', ''),
+                    'Category': 'Hotel',
+                    'Contextual keywords': '', # Not provided, leave blank
+                    'Address': f"{item.get('address.addr1', '')}, {item.get('address.city', '')}, {item.get('address.country', '')}",
+                    'Tracking template': '', # Not provided, leave blank
+                    'Custom parameter': '', # Not provided, leave blank
+                    'Final mobile URL': '', # Not provided, leave blank
+                    'Android app link': '', # Not provided, leave blank
+                    'iOS app link': '', # Not provided, leave blank
+                    'iOS app store ID': '' # Not provided, leave blank
+                }
+                writer.writerow(row)
+        print(f"Successfully created Google CSV file: {filename} with {len(data)} rows.")
+    except Exception as e:
+        print(f"Error writing to Google CSV file {filename}: {e}")
+
+
 def write_to_xml(data, filename):
     """
     Writes a list of dictionaries to a new XML file with the provided Meta format,
@@ -294,10 +341,12 @@ if __name__ == "__main__":
                 print("\nProcessing Turkey-specific hotels for separate files...")
                 write_to_csv(turkey_items, 'turkey.csv')
                 write_to_xml(turkey_items, 'turkey.xml')
+                write_to_google_csv(turkey_items, 'turkey_google.csv')
 
                 print("\nProcessing combined Türgi and Turkey hotels...")
                 write_to_csv(combined_turgi_list, 'turgi.csv')
                 write_to_xml(combined_turgi_list, 'turgi.xml')
+                write_to_google_csv(combined_turgi_list, 'turgi_google.csv')
             else:
                 processed_items = processed_data['processed_items']
                 if processed_items:
@@ -305,10 +354,12 @@ if __name__ == "__main__":
                     if country_name_latin:
                         csv_filename = sanitize_filename(country_name_latin, '.csv')
                         xml_filename = sanitize_filename(country_name_latin, '.xml')
+                        google_csv_filename = sanitize_filename(country_name_latin, '_google.csv')
                         
                         print(f"\nProcessing for {country_name_latin}...")
                         write_to_csv(processed_items, csv_filename)
                         write_to_xml(processed_items, xml_filename)
+                        write_to_google_csv(processed_items, google_csv_filename)
                     else:
                         print("Warning: Could not determine country name from feed.")
         else:
