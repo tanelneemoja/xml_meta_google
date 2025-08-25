@@ -250,7 +250,7 @@ def write_to_google_csv(data, filename):
                     'Star rating': item.get('star_rating', ''),
                     'Category': 'Hotel',
                     'Contextual keywords': '', # Not provided, leave blank
-                    'Address': f"{item.get('address.addr1', '')}, {item.get('address.city', '')}, {item.get('address.country', '')}",
+                    'Address': '',
                     'Tracking template': '', # Not provided, leave blank
                     'Custom parameter': '', # Not provided, leave blank
                     'Final mobile URL': '', # Not provided, leave blank
