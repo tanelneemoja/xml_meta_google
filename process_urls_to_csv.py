@@ -4,7 +4,7 @@ import csv
 import re
 import os
 import io
-
+ 
 # List of URLs to process.
 URLS = [
     {'country_name': 'Bulgaaria', 'url': 'https://www.teztour.ee/bestoffers/minprices.ee.html?departureCityId=3746&countryId=158976'},
