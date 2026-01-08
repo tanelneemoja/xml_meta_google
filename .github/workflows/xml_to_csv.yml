@@ -6,7 +6,6 @@ on:
       - main
   schedule:
     # Runs every 4 hours, adjusted for Estonian time (EEST, UTC+3)
-    - cron: '0 1,5,9,13,17,21 * * *'
   workflow_dispatch:
 
 jobs:
